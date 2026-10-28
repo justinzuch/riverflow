@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>River Flows | Fly Fish Life</title>
+  <meta name="description" content="Current river flows (CFS) for Deckers, the Dream Stream, Elevenmile Canyon and the Arkansas below Pueblo.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <p class="eyebrow">Fly Fish Life</p>
+      <h1>River Flows</h1>
+      <p class="sub">Live streamflow in cubic feet per second</p>
+    </header>
+
+    <nav class="picker" role="tablist" aria-label="Choose a river">
+      {% for f in flows %}
+      <a class="pill{% if f.key == selected %} active{% endif %}" role="tab"
+         id="tab-{{ f.key }}" href="?river={{ f.key }}" data-river="{{ f.key }}"
+         aria-controls="panel-{{ f.key }}" aria-selected="{{ 'true' if f.key == selected else 'false' }}">
+        <span class="pill-name">{{ f.river }}</span>
+        <span class="pill-cfs">{{ f.cfs_display }}{% if f.cfs is not none %} cfs{% endif %}</span>
+      </a>
+      {% endfor %}
+    </nav>
+
+    {% for f in flows %}
+    <section class="panel" id="panel-{{ f.key }}" role="tabpanel" aria-labelledby="tab-{{ f.key }}"
+             {% if f.key != selected %}hidden{% endif %}>
+      <div class="panel-head">
+        <div>
+          <p class="water">{{ f.water }}</p>
+          <h2>{{ f.river }}</h2>
+        </div>
+        <span class="badge">{{ f.source|upper }}</span>
+      </div>
+
+      {% if f.error %}
+        <div class="reading">
+          <p class="cfs na">—</p>
+          <p class="err">{{ f.error }}. Check back soon.</p>
+        </div>
+      {% else %}
+        <div class="reading">
+          <p class="cfs">{{ f.cfs_display }}<span class="unit">CFS</span></p>
+          <p class="time"><span class="dot" aria-hidden="true"></span>Reading at {{ f.timestamp_local }}</p>
+        </div>
+      {% endif %}
+
+      {% if f.chart %}
+      {% set c = f.chart %}
+      <div class="chart-card">
+        <div class="chart-head">
+          <h3>Last 7 days</h3>
+          <div class="stats">
+            <span><em>Low</em> {{ c.min }} <small>{{ c.min_when }}</small></span>
+            <span><em>High</em> {{ c.max }} <small>{{ c.max_when }}</small></span>
+          </div>
+        </div>
+        <div class="chart" data-points='{{ c.points|tojson }}' data-w="{{ c.w }}" data-h="{{ c.h }}">
+          <span class="ylab ytop">{{ c.ymax }}</span>
+          <span class="ylab ybot">{{ c.ymin }}</span>
+          <svg viewBox="0 0 {{ c.w }} {{ c.h }}" preserveAspectRatio="none" role="img"
+               aria-label="7-day flow for {{ f.river }}, low {{ c.min }}, high {{ c.max }} CFS">
+            <defs>
+              <linearGradient id="g-{{ f.key }}" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="currentColor" stop-opacity=".28"/>
+                <stop offset="1" stop-color="currentColor" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            {% for d in c.days %}<line class="grid" x1="{{ d.x }}" x2="{{ d.x }}" y1="0" y2="{{ c.h }}"/>{% endfor %}
+            <path class="area" d="{{ c.area }}" fill="url(#g-{{ f.key }})"/>
+            <path class="line" d="{{ c.line }}"/>
+            <line class="hover-line" x1="0" x2="0" y1="0" y2="{{ c.h }}" visibility="hidden"/>
+          </svg>
+          <span class="hover-dot" hidden></span>
+          <span class="tip" hidden></span>
+          <div class="xlabels">
+            {% for d in c.days %}<span style="left:{{ '%.2f'|format(d.pct) }}%">{{ d.label }}</span>{% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="meta">
+        <p class="gauge">{{ f.gauge_name }}</p>
+        <a class="src" href="{{ f.url }}" target="_blank" rel="noopener">View gauge on {{ 'USGS' if f.source == 'usgs' else 'Colorado DWR' }} &rarr;</a>
+      </div>
+    </section>
+    {% endfor %}
+
+    <footer>
+      <p>Data: U.S. Geological Survey &amp; Colorado Division of Water Resources (provisional, subject to revision).
+         Refreshed about every {{ cache_minutes }} min &middot; page built {{ generated }} &middot;
+         <a href="{{ url_for('api_flows') }}">JSON</a></p>
+    </footer>
+  </div>
+
+  <script>
+  (function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.pill'));
+    var keys = tabs.map(function (t) { return t.dataset.river; });
+
+    function show(key, push) {
+      if (keys.indexOf(key) < 0) return;
+      tabs.forEach(function (t) {
+        var on = t.dataset.river === key;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        document.getElementById('panel-' + t.dataset.river).hidden = !on;
+      });
+      if (push) {
+        var url = new URL(window.location.href);
+        url.searchParams.set('river', key);
+        url.hash = '';
+        history.pushState({ river: key }, '', url.pathname + url.search);
+      }
+    }
+
+    tabs.forEach(function (t) {
+      t.addEventListener('click', function (e) {
+        if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+        e.preventDefault();
+        show(t.dataset.river, true);
+      });
+    });
+    window.addEventListener('popstate', function () {
+      show(new URL(window.location.href).searchParams.get('river') || keys[0], false);
+    });
+    // also accept #deckers style links
+    var h = window.location.hash.replace('#', '').toLowerCase();
+    if (h) show(h, false);
+    window.addEventListener('hashchange', function () {
+      show(window.location.hash.replace('#', '').toLowerCase(), false);
+    });
+
+    // chart hover tooltips
+    document.querySelectorAll('.chart').forEach(function (chart) {
+      var pts = JSON.parse(chart.dataset.points), W = +chart.dataset.w, H = +chart.dataset.h;
+      var svg = chart.querySelector('svg'), vline = chart.querySelector('.hover-line');
+      var tip = chart.querySelector('.tip'), dot = chart.querySelector('.hover-dot');
+      function move(clientX) {
+        var r = svg.getBoundingClientRect();
+        var x = Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * W;
+        var best = pts[0];
+        for (var i = 1; i < pts.length; i++) if (Math.abs(pts[i][0] - x) < Math.abs(best[0] - x)) best = pts[i];
+        var px = best[0] / W * 100, py = best[1] / H * 100;
+        vline.setAttribute('x1', best[0]); vline.setAttribute('x2', best[0]);
+        vline.setAttribute('visibility', 'visible');
+        dot.hidden = false; dot.style.left = px + '%'; dot.style.top = py + '%';
+        tip.hidden = false; tip.textContent = best[2] + ' cfs · ' + best[3];
+        tip.style.left = Math.max(12, Math.min(88, px)) + '%';
+      }
+      function hide() { vline.setAttribute('visibility', 'hidden'); tip.hidden = true; dot.hidden = true; }
+      svg.addEventListener('mousemove', function (e) { move(e.clientX); });
+      svg.addEventListener('mouseleave', hide);
+      svg.addEventListener('touchmove', function (e) { move(e.touches[0].clientX); }, { passive: true });
+      svg.addEventListener('touchend', hide);
+    });
+  })();
+  </script>
+</body>
+</html>
