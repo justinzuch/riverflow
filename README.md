@@ -72,21 +72,6 @@ git remote add origin git@github.com:<you>/riverflow.git && git push -u origin m
 ```
 (`.gitignore` already excludes `venv/` and caches.)
 
-## Deploy on GoDaddy cPanel (Setup Python App)
-1. Upload the project: in cPanel **Terminal**, `git clone` your repo into your home directory, e.g. `~/riverflow`
-   (or upload the zip with File Manager and extract). Keep it **outside** `public_html`.
-2. cPanel → **Setup Python App** → **Create Application**:
-   - Python version: 3.9 or newer (latest available)
-   - Application root: `riverflow`
-   - Application URL: `flyfishlife.com` / `riverflow`
-   - Application startup file: `passenger_wsgi.py`
-   - Application entry point: `application`
-   - Click **Create**.
-3. Install requirements: on the app page, add `requirements.txt` under "Configuration files" and click
-   **Run Pip Install**. Or in Terminal, copy the "Enter to the virtual environment" command shown at the top
-   of the app page, run it, then `pip install -r requirements.txt`.
-4. Click **Restart**, then open https://flyfishlife.com/riverflow/ and https://flyfishlife.com/riverflow/api/flows.
-5. To update later: `cd ~/riverflow && git pull`, then Restart the app (or `touch tmp/restart.txt`).
 
 ### Troubleshooting
 - **CSS missing / links point to `/static`**: add environment variable `RIVERFLOW_URL_PREFIX=/riverflow`
