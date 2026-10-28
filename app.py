@@ -1,4 +1,6 @@
 import os
+#importing random river to start, instead of defauling to the first river in the list
+import random
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -80,15 +82,22 @@ def index():
     data = flow_data.get_flows()
     keys = [f["key"] for f in data]
     selected = request.args.get("river", "").lower()
-    if selected not in keys:
-        selected = keys[0]
+    picked_at_random = selected not in keys
+    if picked_at_random:
+        # No (or unknown) ?river= given: feature a random river on each visit.
+        selected = random.choice(keys)
     for f in data:
         f["cfs_display"] = _fmt_cfs(f["cfs"])
         f["chart"] = _chart(f.get("history_7d") or [])
     now = datetime.now(TZ)
-    return render_template("index.html", flows=data, selected=selected,
+    html = render_template("index.html", flows=data, selected=selected,
+                           picked_at_random=picked_at_random,
                            generated=now.strftime("%b %-d, %Y %-I:%M %p ") + now.tzname(),
                            cache_minutes=config.CACHE_SECONDS // 60)
+    resp = app.make_response(html)
+    # Don't let browsers/proxies cache the page, so each visit gets a fresh pick.
+    resp.headers["Cache-Control"] = "no-store"
+    return resp    
 
 
 @app.route("/api/flows")

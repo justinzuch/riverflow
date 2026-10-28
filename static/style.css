@@ -14,9 +14,10 @@ body {
 .wrap { max-width: 860px; margin: 0 auto; padding: 28px 18px 32px; }
 
 /* header */
-.top { text-align: center; margin-bottom: 22px; }
+.top h1 { margin: 4px 0 2px; font-size: clamp(1.5rem, 6vw, 2.4rem); letter-spacing: -.02em; overflow-wrap: anywhere; }
+.top h1 .slash { color: var(--accent); }
+.pick-note { margin: 4px 0 10px; font-size: .82rem; color: var(--muted); font-style: italic; }
 .eyebrow { margin: 0; font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
-.top h1 { margin: 4px 0 2px; font-size: clamp(1.8rem, 4vw, 2.4rem); letter-spacing: -.02em; }
 .sub { margin: 0; color: var(--muted); }
 
 /* selector */

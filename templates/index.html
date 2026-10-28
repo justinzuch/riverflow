@@ -3,17 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>River Flows | Fly Fish Life</title>
+  <title>River Flows | flyfishlife.com</title>
   <meta name="description" content="Current river flows (CFS) for Deckers, the Dream Stream, Elevenmile Canyon and the Arkansas below Pueblo.">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <div class="wrap">
     <header class="top">
-      <p class="eyebrow">Fly Fish Life</p>
-      <h1>River Flows</h1>
+
+      <h1>flyfishlife.com<span class="slash">/riverflow</span></h1>
       <p class="sub">Live streamflow in cubic feet per second</p>
     </header>
+    <!--Pick a random river to start, instead of defaulting to the first river in the list -->
+    {% if picked_at_random %}
+    <p class="pick-note" id="pick-note">River picked at random &mdash; select a gauge to check.</p>
+    {% endif %}
 
     <nav class="picker" role="tablist" aria-label="Choose a river">
       {% for f in flows %}
@@ -102,6 +106,8 @@
   (function () {
     var tabs = Array.prototype.slice.call(document.querySelectorAll('.pill'));
     var keys = tabs.map(function (t) { return t.dataset.river; });
+    // river the server picked for this visit (random when no ?river= given)
+    var initial = (tabs.filter(function (t) { return t.classList.contains('active'); })[0] || tabs[0]).dataset.river;
 
     function show(key, push) {
       if (keys.indexOf(key) < 0) return;
@@ -127,7 +133,7 @@
       });
     });
     window.addEventListener('popstate', function () {
-      show(new URL(window.location.href).searchParams.get('river') || keys[0], false);
+      show(new URL(window.location.href).searchParams.get('river') || initial, false);
     });
     // also accept #deckers style links
     var h = window.location.hash.replace('#', '').toLowerCase();
